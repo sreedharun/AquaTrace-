@@ -34,6 +34,7 @@ export interface Detection {
   note?: string;
   alternatives?: AlternativeClass[];
   originalClass?: string;
+  createdAt?: string;
 }
 
 export interface Analysis {

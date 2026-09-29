@@ -1,4 +1,35 @@
+# Frontend artifacts
 .env.local
 .env.*.local
 node_modules/
 dist/
+
+# Python & Backend
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+venv/
+.venv/
+env/
+.pytest_cache/
+
+# Local databases & user uploads (do not push to git)
+*.db
+*.sqlite
+*.sqlite3
+analyses_db.json
+uploads/
+thumbnails/
+
+# Sonar Datasets (do not commit raw/preprocessed images)
+dataset/
+datasets/
+data/
+preprocessed/
+Testing/
+
+# Model Weights handling:
+# Ignore arbitrary .pt files, but explicitly track the production best.pt
+*.pt
+!weights/best.pt

@@ -209,7 +209,7 @@ export const mockApi = {
 
     analysesInMemory.forEach((a) => {
       a.detections.forEach((d) => {
-        if (d.status === 'pending_review' || (d.confidence < settings.reviewThreshold && d.status === 'pending_review')) {
+        if (d.status === 'pending_review') {
           queue.push(d);
         }
       });
@@ -299,7 +299,7 @@ export const mockApi = {
       a.detections.forEach((d) => {
         totalDetections++;
         confidenceSum += d.confidence;
-        if (d.status === 'pending_review' || (d.confidence < settings.reviewThreshold && d.status === 'pending_review')) {
+        if (d.status === 'pending_review') {
           pendingCount++;
         }
       });

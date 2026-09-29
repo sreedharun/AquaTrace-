@@ -39,7 +39,7 @@ export const ConfidenceDistChart: React.FC<ConfidenceDistChartProps> = ({ detect
             <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748B' }} />
             <YAxis tick={{ fontSize: 11, fill: '#64748B' }} allowDecimals={false} />
             <Tooltip
-              content={({ active, payload }) => {
+              content={({ active, payload }: any) => {
                 if (active && payload && payload.length) {
                   const d = payload[0].payload;
                   return (

@@ -1,9 +1,8 @@
 import React, { useRef } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Detection } from '../../types/sonar';
-import { ZoomIn, ZoomOut, RotateCcw, Maximize2, Download } from 'lucide-react';
-import { ClassChip } from '../common/ClassChip';
-import { ConfidenceBadge } from '../common/ConfidenceBadge';
+import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { getDebrisClassInfo } from '../../config/classes';
 
 interface SonarImageViewerProps {
   imageUrl: string;
@@ -36,25 +35,6 @@ export const SonarImageViewer: React.FC<SonarImageViewerProps> = ({
   const visibleDetections = detections.filter(
     (d) => d.confidence >= confidenceThreshold
   );
-
-  const getStatusOutlineColor = (status: string, isHovered: boolean, isSelected: boolean) => {
-    if (isSelected) return 'stroke-primary stroke-[3] fill-primary/20';
-    if (isHovered) return 'stroke-primary stroke-[2.5] fill-primary/15';
-
-    switch (status) {
-      case 'verified':
-      case 'auto_accepted':
-        return 'stroke-success stroke-[2] fill-success/10';
-      case 'pending_review':
-        return 'stroke-warning stroke-[2] stroke-dasharray-[4_2] fill-warning/10';
-      case 'corrected':
-        return 'stroke-primary stroke-[2] fill-primary/10';
-      case 'rejected':
-        return 'stroke-danger stroke-[1.5] stroke-dasharray-[2_2] fill-danger/5 opacity-50';
-      default:
-        return 'stroke-muted stroke-[1.5] fill-muted/10';
-    }
-  };
 
   return (
     <div className="relative w-full h-[520px] md:h-[620px] bg-[#0A131C] rounded-card border border-border overflow-hidden group select-none flex flex-col">
@@ -113,10 +93,13 @@ export const SonarImageViewer: React.FC<SonarImageViewerProps> = ({
                   className="absolute inset-0 w-full h-full pointer-events-none"
                   viewBox="0 0 1 1"
                   preserveAspectRatio="none"
+                  style={{ overflow: 'visible' }}
                 >
                   {visibleDetections.map((d) => {
                     const isHovered = hoveredDetectionId === d.id;
                     const isSelected = selectedDetectionId === d.id;
+                    const classInfo = getDebrisClassInfo(d.class);
+                    const strokeColor = isSelected ? '#38bdf8' : isHovered ? '#60a5fa' : (classInfo?.color || '#f59e0b');
 
                     return (
                       <g key={d.id} className="pointer-events-auto">
@@ -125,12 +108,15 @@ export const SonarImageViewer: React.FC<SonarImageViewerProps> = ({
                           y={d.bbox.y}
                           width={d.bbox.w}
                           height={d.bbox.h}
-                          rx={0.005}
-                          className={`cursor-pointer transition-all duration-150 ${getStatusOutlineColor(
-                            d.status,
-                            isHovered,
-                            isSelected
-                          )}`}
+                          fill={strokeColor}
+                          fillOpacity={isSelected ? 0.25 : isHovered ? 0.18 : 0.08}
+                          stroke={strokeColor}
+                          strokeDasharray={d.status === 'pending_review' ? '0.008 0.004' : undefined}
+                          style={{
+                            vectorEffect: 'non-scaling-stroke',
+                            strokeWidth: isSelected ? 3.5 : isHovered ? 2.5 : 2,
+                            cursor: 'pointer'
+                          }}
                           onClick={() => onSelectDetection(d.id)}
                           onMouseEnter={() => onHoverDetection(d.id)}
                           onMouseLeave={() => onHoverDetection(null)}
@@ -145,6 +131,8 @@ export const SonarImageViewer: React.FC<SonarImageViewerProps> = ({
                   visibleDetections.map((d) => {
                     const isHovered = hoveredDetectionId === d.id;
                     const isSelected = selectedDetectionId === d.id;
+                    const classInfo = getDebrisClassInfo(d.class);
+                    const badgeColor = classInfo?.color || '#38bdf8';
 
                     return (
                       <div
@@ -158,9 +146,12 @@ export const SonarImageViewer: React.FC<SonarImageViewerProps> = ({
                           isHovered || isSelected ? 'scale-110' : 'scale-90 opacity-90'
                         }`}
                       >
-                        <div className="px-1.5 py-0.5 rounded bg-surface/90 backdrop-blur-xs border border-border shadow-popover flex items-center gap-1 text-[10px] font-semibold text-text whitespace-nowrap">
-                          <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                          <span>{d.class}</span>
+                        <div className="px-1.5 py-0.5 rounded bg-surface/95 backdrop-blur-xs border border-border shadow-popover flex items-center gap-1 text-[10px] font-semibold text-text whitespace-nowrap">
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ backgroundColor: badgeColor }}
+                          />
+                          <span>{classInfo?.name || d.class}</span>
                           <span className="text-muted font-mono">{Math.round(d.confidence * 100)}%</span>
                         </div>
                       </div>

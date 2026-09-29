@@ -66,8 +66,9 @@ export const NewAnalysisPage: React.FC = () => {
     await new Promise((r) => setTimeout(r, 300));
 
     try {
-      // 3. Perform analysis via mock API
+      // 3. Perform real YOLO26m neural analysis
       const created = await createAnalysis({
+        file: item.file,
         name: metadata.surveyName + (total > 1 ? ` (File ${index + 1})` : ''),
         vessel: metadata.vessel,
         sonarType: metadata.sonarType,

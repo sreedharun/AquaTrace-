@@ -5,7 +5,7 @@
  */
 
 // MapTiler key (injected by Vite from .env.local)
-export const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_KEY as string | undefined;
+export const MAPTILER_KEY = (import.meta as any).env?.VITE_MAPTILER_KEY as string | undefined;
 
 // ── Active tile ───────────────────────────────────────────────────────────────
 export const TILE_URL = MAPTILER_KEY

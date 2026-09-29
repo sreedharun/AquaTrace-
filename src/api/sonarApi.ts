@@ -1,24 +1,27 @@
 /**
- * SonarTrace API Interface Layer
- * 
- * TO SWAP WITH A REAL BACKEND ENDPOINT:
- * 1. Set `USE_MOCK_API = false` below or set environment variable VITE_USE_MOCK_API=false.
- * 2. Update `REAL_API_BASE_URL` with your REST API server URL.
- * 3. The data contracts (Analysis, Detection, Settings) match standard JSON payloads.
+ * SonarTrace API Interface Layer connected to real YOLO26m backend
  */
 
 import { mockApi } from './mockApi';
 import { Analysis, Detection, DetectionStatus, FilterOptions, SummaryStats, AppSettings, BoundingBox } from '../types/sonar';
 
-const USE_MOCK_API = true;
-const REAL_API_BASE_URL = 'https://api.sonartrace.example.com/v1';
+const USE_MOCK_API = false;
+const REAL_API_BASE_URL = '/api';
 
 export const sonarApi = {
   async getAnalyses(filters?: FilterOptions): Promise<Analysis[]> {
     if (USE_MOCK_API) return mockApi.getAnalyses(filters);
 
-    const params = new URLSearchParams(filters as Record<string, string>).toString();
-    const res = await fetch(`${REAL_API_BASE_URL}/analyses?${params}`);
+    const cleanFilters: Record<string, string> = {};
+    if (filters) {
+      Object.entries(filters).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') {
+          cleanFilters[k] = String(v);
+        }
+      });
+    }
+    const params = new URLSearchParams(cleanFilters).toString();
+    const res = await fetch(`${REAL_API_BASE_URL}/analyses${params ? '?' + params : ''}`);
     if (!res.ok) throw new Error('Failed to fetch analyses');
     return res.json();
   },
@@ -32,6 +35,7 @@ export const sonarApi = {
   },
 
   async createAnalysis(formData: {
+    file?: File;
     name: string;
     vessel?: string;
     sonarType?: string;
@@ -44,12 +48,24 @@ export const sonarApi = {
   }): Promise<Analysis> {
     if (USE_MOCK_API) return mockApi.createAnalysis(formData);
 
+    const body = new FormData();
+    if (formData.file) {
+      body.append('file', formData.file);
+    }
+    body.append('name', formData.name);
+    if (formData.vessel) body.append('vessel', formData.vessel);
+    if (formData.sonarType) body.append('sonarType', formData.sonarType);
+    if (formData.positionSource) body.append('positionSource', formData.positionSource);
+    if (formData.lat !== undefined) body.append('lat', String(formData.lat));
+    if (formData.lon !== undefined) body.append('lon', String(formData.lon));
+    if (formData.heading !== undefined) body.append('heading', String(formData.heading));
+    if (formData.fileSize !== undefined) body.append('fileSize', String(formData.fileSize));
+
     const res = await fetch(`${REAL_API_BASE_URL}/analyses`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData),
+      body,
     });
-    if (!res.ok) throw new Error('Failed to create analysis');
+    if (!res.ok) throw new Error('Failed to create analysis with YOLO model');
     return res.json();
   },
 
@@ -65,8 +81,16 @@ export const sonarApi = {
   async getDetections(filters?: FilterOptions): Promise<Detection[]> {
     if (USE_MOCK_API) return mockApi.getDetections(filters);
 
-    const params = new URLSearchParams(filters as Record<string, string>).toString();
-    const res = await fetch(`${REAL_API_BASE_URL}/detections?${params}`);
+    const cleanFilters: Record<string, string> = {};
+    if (filters) {
+      Object.entries(filters).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') {
+          cleanFilters[k] = String(v);
+        }
+      });
+    }
+    const params = new URLSearchParams(cleanFilters).toString();
+    const res = await fetch(`${REAL_API_BASE_URL}/detections${params ? '?' + params : ''}`);
     if (!res.ok) throw new Error('Failed to fetch detections');
     return res.json();
   },
@@ -74,8 +98,16 @@ export const sonarApi = {
   async getReviewQueue(filters?: FilterOptions): Promise<Detection[]> {
     if (USE_MOCK_API) return mockApi.getReviewQueue(filters);
 
-    const params = new URLSearchParams(filters as Record<string, string>).toString();
-    const res = await fetch(`${REAL_API_BASE_URL}/review-queue?${params}`);
+    const cleanFilters: Record<string, string> = {};
+    if (filters) {
+      Object.entries(filters).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') {
+          cleanFilters[k] = String(v);
+        }
+      });
+    }
+    const params = new URLSearchParams(cleanFilters).toString();
+    const res = await fetch(`${REAL_API_BASE_URL}/review-queue${params ? '?' + params : ''}`);
     if (!res.ok) throw new Error('Failed to fetch review queue');
     return res.json();
   },

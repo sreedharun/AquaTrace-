@@ -81,7 +81,7 @@ export const AnalysisDetailPage: React.FC = () => {
   }
 
   const pendingCount = analysis.detections.filter(
-    (d) => d.status === 'pending_review' || (d.confidence < settings.reviewThreshold && d.status === 'pending_review')
+    (d) => d.status === 'pending_review'
   ).length;
 
   const handleDownloadAnnotated = () => {

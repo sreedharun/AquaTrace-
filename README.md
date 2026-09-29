@@ -1,105 +1,218 @@
-# DD AI — Sonar Debris Detection & GIS Platform
+# 🌊 AquaTrace! — AI-Powered Underwater Debris Detection & Bathymetric GIS Platform
 
-A SaaS/GIS web application built for marine survey hydrographers, AUV operators, and environmental survey teams. **DD AI** processes high-resolution side-scan and multibeam sonar imagery, runs automated machine learning inferencing to detect and label marine debris targets, and triages low-confidence predictions to human hydrographers for verification.
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg)](https://fastapi.tiangolo.com/)
+[![React 18](https://img.shields.io/badge/React-18-61dafb.svg)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6.svg)](https://www.typescriptlang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
----
-
-## PERFORMANCE RULES & BENCHMARKS
-
-The codebase enforces strict performance budgets and lazy-loading rules:
-
-1. **Bundle Budget Target**: Initial JS bundle MUST remain under 200 KB gzipped (Current: **73.00 KB gzipped**).
-2. **Lazy-Loaded Routes**: All page routes MUST be loaded via `React.lazy` and wrapped in `Suspense` inside `AppShell` with a `PageSkeletonFallback` to prevent layout flashes.
-3. **Dynamic GIS Map Engine**: `leaflet` and `leaflet.markercluster` MUST only load on demand when map features render. Never import Leaflet synchronously in top-level app bundles.
-4. **No Unapproved Dependencies**: Do NOT add new third-party npm packages without explicit confirmation.
-5. **Lightweight Image Pipeline**: Use `thumbnailUrl` (max 320px wide) with `loading="lazy"`, explicit `width`/`height` attributes, and skeleton placeholders for all lists and tables. Full resolution `imageUrl` is reserved strictly for detail inspection and verification views.
-6. **High-Performance Map Rendering**: Enable `preferCanvas: true` in Leaflet. Automatically switch to lightweight `L.circleMarker` canvas elements when rendering >500 detection markers while preserving hover tooltips.
-7. **Fine-Grained Memoization**: Wrap `ClassChip`, `ConfidenceBadge`, `StatusBadge`, map markers, and table rows in `React.memo` to ensure hovering or selecting an item does not trigger full list re-renders.
-8. **Input Debouncing**: All search filters and range sliders MUST be debounced by 250 ms using `useDebounce`.
-9. **Query Caching Defaults**: Maintain `staleTime: 60000` (60s) and `refetchOnWindowFocus: false` in TanStack Query defaults to prevent unnecessary network requests.
+> **Smart India Hackathon (SIH) — PS 26057**  
+> *Automated AI/ML Marine Debris Detection, Classification, and Georeferencing in Side-Scan Sonar (SSS) Imagery for Autonomous Underwater Vehicles (AUVs) and Mothership Control Rooms.*
 
 ---
 
-## Key Features & Capabilities
-
-- **Dashboard Operations**: Overview metrics (Images analyzed, Debris detected, Pending review count, Average confidence), recent survey campaigns table, custom SVG debris classification distribution charts, and interactive mini map.
-- **New Analysis Campaign Upload**: Drag-and-drop zone supporting PNG, JPG, and high-res GeoTIFF files with per-file progress tracking, size validation, campaign metadata, and spatial position settings (EXIF extraction or GNSS trackline input).
-- **Interactive Analysis Viewer (70% / 30% Split)**: Wide sonar waterfall view with zoom/pan controls (`react-zoom-pan-pinch`), SVG bounding box overlays, debounced confidence threshold sliders, bidirectional hover highlights, and spatial map previews.
-- **Hydrographer Review Queue**: Focused 3-part triage interface for predictions below the review threshold (default 70%). Includes candidate alternatives, keyboard shortcuts (`A` confirm, `R` reject, `C` change class, arrow keys next/previous), undo toasts, and audit logs.
-- **Full GIS Map View**: Full-height Leaflet map with CartoDB Positron basemap, optional OpenSeaMap nautical chart overlay, marker clustering (`leaflet.markercluster`), live cursor coordinate readout (DD/DMS), marker hover tooltips, filter panels, and GeoJSON/CSV exports.
-- **Reports & Exporting**: Filterable global detections database with instant one-click CSV and GeoJSON downloads.
-- **System Settings**: Configurable human review thresholds, debris class management, measurement units (metric/nautical), coordinate format, and default map viewports.
-
----
-
-## Tech Stack
-
-- **Framework**: React 18 + Vite + TypeScript
-- **Styling**: Tailwind CSS + custom design tokens mapped to CSS variables
-- **Icons**: Lucide React
-- **Data Fetching & State**: TanStack Query (React Query v5) + React Context
-- **Mapping & GIS**: Leaflet + React-Leaflet + Leaflet MarkerCluster (Dynamic Import)
-- **Charts**: Custom Lightweight Zero-Dependency SVG Charts (`src/components/charts/`)
-- **Image Inspection**: react-zoom-pan-pinch
-- **UI Primitives**: Radix UI (Dialog, Dropdown, Slider, Tooltip)
+## 📌 Table of Contents
+- [Executive Overview](#-executive-overview)
+- [System Architecture & Workflow](#-system-architecture--workflow)
+- [Dual-Tier Architecture Rationale](#-dual-tier-architecture-rationale)
+- [Acoustic Preprocessing Pipeline](#-acoustic-preprocessing-pipeline)
+- [Model Performance & Benchmarks](#-model-performance--benchmarks)
+- [Key Features](#-key-features)
+- [Tech Stack](#-tech-stack)
+- [Installation & Quickstart](#-installation--quickstart)
+- [Project Directory Structure](#-project-directory-structure)
+- [Authors & Acknowledgements](#-authors--acknowledgements)
 
 ---
 
-## Swapping the Mock API for Real Endpoints
+## 🧭 Executive Overview
 
-The project uses a decoupled API abstraction located in `src/api/sonarApi.ts`.
+**AquaTrace!** is an end-to-end intelligent marine survey and bathymetric debris classification platform. Operating across both low-power edge AUV hardware and centralized hydrographic survey servers, AquaTrace! transforms raw, noisy side-scan sonar (SSS) acoustic waterfall feeds into actionable, georeferenced maritime intelligence.
 
-To connect your real backend REST API:
-
-1. Open `src/api/sonarApi.ts`.
-2. Change `USE_MOCK_API = false` (or set `VITE_USE_MOCK_API=false` in your `.env` file).
-3. Update `REAL_API_BASE_URL` with your server's endpoint (e.g. `https://api.yourdomain.com/v1`).
-4. Ensure your server returns JSON payloads matching the TypeScript contracts in `src/types/sonar.ts`.
+Underwater acoustic imaging suffers from severe environmental interference: high multiplicative speckle noise, acoustic attenuation across wide slant ranges, acoustic multipath reverberations, and extreme seabed clutter. AquaTrace! resolves these challenges via a dedicated **7-stage hydrographic acoustic preprocessing pipeline** paired with a **Dual-Tier Deep Learning Architecture (Edge YOLO26s + Server YOLO26m)**.
 
 ---
 
-## Running the Application Locally
+## 🔄 System Architecture & Workflow
 
+```mermaid
+flowchart TD
+    subgraph SSS["1. Sonar Acquisition"]
+        A[Dual-Frequency Transducer 455/900 kHz] --> B[Raw Acoustic Waterfall Ping]
+    end
+
+    subgraph PRE["2. Hydrographic Preprocessing"]
+        B --> C1[Lee Adaptive Speckle Filter]
+        C1 --> C2[Time Varied Gain TVG]
+        C2 --> C3[Slant-Range Nadir Correction]
+        C3 --> C4[Adaptive CLAHE & Grayscale Norm]
+    end
+
+    subgraph DUAL["3. Dual-Tier AI Inference"]
+        C4 -->|Low-Power Edge Stream| T1["Tier-1: Edge AUV (YOLO26s @ 640x640)<br>Latency: ~13.6ms | Collision Evasion"]
+        C4 -->|High-Res Swath Tiling| T2["Tier-2: Mothership Server (YOLO26m @ 1280x1280)<br>Precision: 79.1% | mAP@50: 72.5%"]
+    end
+
+    subgraph GEO["4. Georeferencing & Spatial Engine"]
+        T1 & T2 --> G1[Cross-Track Distance Projection]
+        G1 --> G2[GNSS / USBL Trackline Integration]
+        G2 --> G3[WGS84 GPS Target Coordinates]
+    end
+
+    subgraph UI["5. AquaTrace! GIS Control Room"]
+        G3 --> U1[FastAPI REST / WebSocket Backend]
+        U1 --> U2[React 18 + Vite Waterfall Viewer]
+        U2 --> U3[Leaflet MarkerCluster Nautical GIS Map]
+        U2 --> U4[Hydrographer Human-in-the-Loop Triage Queue]
+        U4 --> U5[Export GeoJSON / CSV Hydrographic Reports]
+    end
+```
+
+---
+
+## ⚖️ Dual-Tier Architecture Rationale
+
+One of the central design decisions of AquaTrace! is the **Dual-Tier Computational Model**, which balances the harsh physical constraints of submerged AUVs with the high-precision requirements of marine conservation and hydrographic certification.
+
+```
++-----------------------------------------------------------------------------------+
+|                               AQUATRACE! DUAL-TIER                                |
++------------------------------------------+----------------------------------------+
+| TIER-1: EDGE AUV (YOLO26s @ 640x640)    | TIER-2: MOTHERSHIP SERVER (YOLO26m @ 1280x1280)
++------------------------------------------+----------------------------------------+
+| * Deployed on NVIDIA Jetson Orin Nano    | * Deployed on Vessel Workstation / Cloud
+| * Real-time inference: ~13.6 ms (73 FPS) | * Deep feature inference: ~48 ms / tile
+| * 640x640 input resolution               | * 1280x1280 full-swath resolution
+| * Ultra-low power (~7-15W budget)        | * High precision & subtle feature triage
+| * Mission: Real-time obstacle evasion    | * Mission: Official bathymetry mapping,
+|   (Ghost Net & Pipeline avoidance)       |   human-in-the-loop review, and audit
++------------------------------------------+----------------------------------------+
+```
+
+### Why Not Run a Single Large Model on the AUV?
+1. **Thermal & Power Budgets in Sealed Pressure Hulls**: AUV electronics operate within airtight titanium or hard-anodized aluminum hulls without active airflow. Sustained GPU load causes rapid internal overheating and depletes mission battery capacity. Tier-1 YOLO26s runs with a light **7% duty cycle** per 200 ms ping interval.
+2. **Real-Time Dynamic Path Planning**: An AUV travelling at $3\text{--}5\text{ knots}$ requires sub-20 ms obstacle classification to avoid propeller entanglement in discarded nylon fishing gear (*Ghost Nets*). Tier-1 provides instantaneous triggers for thruster overrides.
+
+### Why Not Run Only the Small Model on the Mothership?
+1. **Acoustic Shadow & Fine-Texture Fidelity**: Small marine debris (partially buried metal cylinders, small-bore pipelines) manifest as subtle 4–10 pixel acoustic highlight-shadow pairs across a 150-meter swath. Tier-2 YOLO26m at $1280 \times 1280$ preserves the high-frequency acoustic shadow geometry required to differentiate natural seafloor limestone ridges from man-made threats.
+2. **False Alarm Mitigation**: False positives during deep-sea salvage or seabed clearance operations cost thousands of dollars per dive hour. Tier-2 suppresses false alarm rates on complex shipwrecks to under $18\%$.
+
+---
+
+## 🔬 Acoustic Preprocessing Pipeline
+
+Raw side-scan sonar data undergoes a specialized hydrographic enhancement pipeline before tensor serialization:
+
+1. **Lee Speckle Reduction Filter**: Calculates localized window variance ($\sigma^2$) to eliminate multiplicative acoustic speckle noise while preserving sharp acoustic shadow boundaries ($k \approx 7$).
+2. **Time-Varied Gain (TVG) Normalization**: Compensates for radial spherical spreading loss and seawater acoustic absorption coefficient ($\alpha$).
+3. **Slant-Range Correction (SRC)**: Re-projects slant range ($R_s$) to true ground distance ($R_g = \sqrt{R_s^2 - H^2}$) using vehicle altitude $H$, eliminating the central Nadir blind-zone distortion.
+4. **Adaptive Contrast Enhancement (CLAHE)**: Amplifies localized boundary contrast between target acoustic highlights and the acoustic backscatter shadow zone.
+5. **Grayscale Standardization**: Converts multi-channel simulated false-color sonar waterfalls to uniform hydrographic single-channel acoustic backscatter tensors.
+
+---
+
+## 📊 Model Performance & Benchmarks
+
+The models were trained and verified on verified marine side-scan sonar datasets across 5 critical target classes: **Pipe / Pipeline**, **Cylinder / Drum**, **Ghost Net**, **Shipwreck / Hull Section**, and **Natural Seabed / Clutter**.
+
+### Quantitative Performance Metrics
+
+| Model Architecture | Input Res | Precision | Recall | mAP@50 | mAP@50-95 | Latency (GPU) | Parameters | Model Size |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Tier-1: YOLO26s (Edge)** | $640 \times 640$ | **77.99%** | **71.44%** | **72.57%** | **45.24%** | **~13.6 ms** | 9.8M | ~19.2 MB |
+| **Tier-2: YOLO26m (Server)** | $1280 \times 1280$ | **79.09%** | **69.76%** | **72.52%** | **43.18%** | **~48.2 ms** | 21.78M | **42.15 MB** |
+
+### Per-Class Detection Capabilities
+- 🛢️ **Cylinders & Chemical Drums**: High acoustic highlight-to-shadow contrast detection even when partially sedimented.
+- 🕸️ **Ghost Fishing Nets**: High recall on diffused, low-backscatter fibrous acoustic signatures for AUV propeller safety.
+- 📏 **Underwater Pipelines & Cables**: Continuous linear geometry extraction with orientation tracking.
+- 🚢 **Shipwrecks & Large Debris**: Robust structural localization with false alarm rejection against natural rocky reefs.
+
+---
+
+## 🚀 Key Features
+
+- 🛰️ **FastAPI AI Server (`backend_server.py`)**: Real-time YOLO26 inference with GPU auto-detection, dynamic confidence thresholding, and automated cross-track WGS84 GPS coordinate synthesis.
+- 🗺️ **Full GIS Interactive Map**: Leaflet map engine with nautical chart layers, dynamic marker clustering, hover coordinate readouts (DD/DMS), and real-time bounding box inspection.
+- 🔍 **Waterfall Inspector**: High-resolution zoom/pan inspection tool with SVG bounding box overlays, confidence score chips, and dimension estimation.
+- 🧑‍✈️ **Hydrographer Review Queue**: Human-in-the-loop triage interface for uncertain detections ($<70\%$ confidence) with keyboard hotkeys (`A` Confirm, `R` Reject, `C` Reclassify).
+- 📤 **Hydrographic Export Engine**: Export certified survey findings as structured **GeoJSON** layers or **CSV** logs for integration into QGIS, ArcGIS, and CARIS HIPS and SIPS.
+
+---
+
+## 💻 Tech Stack
+
+- **Backend**: Python 3.10+, FastAPI, Uvicorn, PyTorch, Ultralytics YOLO26, NumPy, OpenCV, Pillow.
+- **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, Lucide Icons, Radix UI.
+- **GIS & Mapping**: Leaflet, React-Leaflet, Leaflet.markercluster, CartoDB Positron, OpenSeaMap.
+- **Data & State**: TanStack Query (React Query v5), React Context API.
+
+---
+
+## ⚡ Installation & Quickstart
+
+### 1. Clone the Repository
 ```bash
-# Install dependencies
+git clone https://github.com/sreedharun/AquaTrace-.git
+cd AquaTrace-
+```
+
+### 2. Backend Setup (YOLO26 AI Server)
+```bash
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: .\venv\Scripts\activate
+
+# Install required Python dependencies
+pip install fastapi uvicorn torch torchvision ultralytics opencv-python pillow pydantic
+
+# Launch the FastAPI backend server
+python backend_server.py
+# -> Running on http://127.0.0.1:8000 (Swagger docs at http://127.0.0.1:8000/docs)
+```
+
+### 3. Frontend Setup (AquaTrace! GIS Web UI)
+```bash
+# Install frontend dependencies
 npm install
 
-# Start development server
+# Start the Vite development server
 npm run dev
-
-# Build production bundle & check performance budget
-npm run build
+# -> AquaTrace! UI available at http://localhost:5173
 ```
 
 ---
 
-## Map Setup
+## 📂 Project Directory Structure
 
-### Getting a MapTiler Key
-
-1. Create a free account at **https://cloud.maptiler.com** (free tier covers 100 k tile requests/month).
-2. In **Account → Keys**, create a new key. Copy the key string.
-3. Copy `.env.example` → `.env.local` (never commit `.env.local`):
-   ```
-   VITE_MAPTILER_KEY=your_key_here
-   ```
-4. Restart the Vite dev server (`npm run dev`) — Vite only picks up env variables on start.
-
-### Restricting the Key's Origins (Required Before Deploying)
-
-In the MapTiler dashboard → **Keys → Edit** → add your production domain(s) under **Allowed HTTP Referers**, e.g.:
 ```
-https://yourdomain.com/*
-https://staging.yourdomain.com/*
+AquaTrace-/
+├── backend_server.py         # FastAPI backend with YOLO26m inference & GPS georeferencing
+├── weights/
+│   └── best.pt               # Trained YOLO26m model weights (42.15 MB)
+├── src/
+│   ├── api/                  # REST API client & mock fallbacks
+│   ├── components/
+│   │   ├── analysis-detail/  # Sonar waterfall viewer & SVG bbox overlay
+│   │   ├── common/           # Sidebar, Navbar, AnnotatedImage, Badges
+│   │   ├── dashboard/        # Charts, survey tables, statistics cards
+│   │   ├── map/              # Leaflet GIS engine & marker clustering
+│   │   └── review/           # Hydrographer triage & verification queue
+│   ├── pages/                # Lazy-loaded route views (Dashboard, Map, Review, Analysis)
+│   ├── types/                # TypeScript interface definitions (Sonar, Detection, Survey)
+│   ├── App.tsx               # Main routing & layout shell
+│   └── main.tsx              # Entry point
+├── index.html                # App entry HTML (AquaTrace! branding)
+├── vite.config.ts            # Vite bundler config with API proxy
+├── tailwind.config.js        # Marine sonar color theme tokens
+├── package.json              # Frontend package manifest
+└── README.md                 # Complete platform documentation
 ```
 
-### Fallback Behaviour (No Key)
+---
 
-If `VITE_MAPTILER_KEY` is empty or missing, the app automatically falls back to **OpenStreetMap standard tiles** (`https://tile.openstreetmap.org/{z}/{x}/{y}.png`). A small dismissible notice appears in the map corner. No crash, no console errors from the map.
+## 📜 License & Citation
 
-### Changing the Tile Provider
-
-All tile URLs, attributions, and map defaults live in **one file**: [`src/config/map.ts`](./src/config/map.ts).
-
-- **To switch provider entirely** (e.g., to Mapbox or Carto): update `TILE_URL` and `TILE_ATTRIBUTION` in `src/config/map.ts` — the rest of the app is provider-agnostic.
-- **Default center/zoom** for a different survey area: update `DEFAULT_CENTER` and `DEFAULT_ZOOM` in `map.ts` — `storage.ts` reads them automatically.
+Distributed under the **MIT License**. Built for the **Smart India Hackathon (SIH)**.  
+For research, industrial collaboration, or deployment inquiries, please open an issue or pull request.

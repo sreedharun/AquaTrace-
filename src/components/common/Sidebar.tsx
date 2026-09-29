@@ -58,10 +58,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {!isCollapsed && (
               <div className="truncate">
                 <span className="font-bold text-base text-text tracking-tight block leading-none">
-                  DD AI
+                  AquaTrace!
                 </span>
                 <span className="text-[11px] font-medium text-muted tracking-wider uppercase block mt-1">
-                  Sonar GIS SaaS
+                  Sonar GIS Platform
                 </span>
               </div>
             )}
